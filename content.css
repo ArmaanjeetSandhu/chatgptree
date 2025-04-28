@@ -1,0 +1,93 @@
+/* ChatGPTree - Content Styles */
+
+/* Highlight style for messages when clicked in the tree */
+.conversation-tree-highlight {
+  animation: highlight-pulse 3s ease-in-out;
+  position: relative;
+}
+
+@keyframes highlight-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* Toggle button for the sidebar */
+.conversation-tree-toggle {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 1000;
+  transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+.conversation-tree-toggle:hover {
+  transform: scale(1.05);
+  background-color: #2563eb;
+}
+
+.conversation-tree-toggle svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Sidebar styles */
+.conversation-tree-sidebar {
+  position: fixed;
+  top: 0;
+  right: -350px;
+  width: 350px;
+  height: 100vh;
+  background-color: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+  transition: right 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.conversation-tree-sidebar-open {
+  right: 0;
+}
+
+.conversation-tree-sidebar iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.conversation-tree-sidebar-close {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #f3f4f6;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 1002;
+}
+
+.conversation-tree-sidebar-close:hover {
+  background-color: #e5e7eb;
+}

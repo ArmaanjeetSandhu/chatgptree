@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatGPTree</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        background-color: #fff;
+        color: #1f2937;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        padding: 16px;
+        background-color: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      h1 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-left: 30px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      button {
+        background-color: #f3f4f6;
+        border: none;
+        border-radius: 4px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      button:hover {
+        background-color: #e5e7eb;
+      }
+
+      .content {
+        flex: 1;
+        overflow: auto;
+        position: relative;
+      }
+
+      .loading-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+      }
+
+      .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 3px solid #e5e7eb;
+        border-top-color: #3b82f6;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .empty-state {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        padding: 32px;
+        text-align: center;
+      }
+
+      .empty-state svg {
+        color: #9ca3af;
+      }
+
+      .empty-state p {
+        color: #4b5563;
+        margin: 0;
+      }
+
+      .empty-state p:first-of-type {
+        font-weight: 500;
+        font-size: 16px;
+      }
+
+      .empty-state-detail {
+        font-size: 14px;
+        color: #6b7280;
+      }
+
+      .graph-container {
+        width: 100%;
+        height: 100%;
+        padding: 16px;
+        overflow: auto;
+      }
+
+      footer {
+        padding: 12px 16px;
+        background-color: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        text-align: center;
+        font-size: 13px;
+        color: #6b7280;
+      }
+
+      /* Mermaid customizations */
+      .mermaid {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Make nodes clickable */
+      .node {
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+
+      .node:hover {
+        opacity: 0.8;
+      }
+
+      .node rect,
+      .node circle,
+      .node ellipse,
+      .node polygon,
+      .node path {
+        transition: stroke-width 0.2s;
+      }
+
+      .node:hover rect,
+      .node:hover circle,
+      .node:hover ellipse,
+      .node:hover polygon,
+      .node:hover path {
+        stroke-width: 2px !important;
+      }
+    </style>
+    <!-- Mermaid.js for rendering the graph -->
+    <script src="libs/mermaid.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Conversation Tree</h1>
+      <div class="actions">
+        <button id="refreshButton" title="Refresh Tree">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+            />
+          </svg>
+        </button>
+        <button id="clearButton" title="Clear Tree">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+            ></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div id="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Loading conversation tree...</p>
+      </div>
+
+      <div id="emptyState" class="empty-state" style="display: none">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="48"
+          height="48"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+          ></path>
+          <line x1="9" y1="10" x2="15" y2="10"></line>
+          <line x1="12" y1="7" x2="12" y2="13"></line>
+        </svg>
+        <p>No conversation data available</p>
+        <p class="empty-state-detail">
+          Start or join a conversation in ChatGPT to see the tree visualization.
+        </p>
+      </div>
+
+      <div id="graph" class="graph-container" style="display: none"></div>
+    </div>
+
+    <footer>
+      <p>Click a node to highlight the message in the chat.</p>
+    </footer>
+
+    <script>
+      // Initialize mermaid
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "neutral",
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true,
+          curve: "cardinal",
+        },
+        securityLevel: "loose",
+      });
+
+      // Connect to the background script
+      const port = chrome.runtime.connect({ name: "sidebar" });
+
+      // Elements
+      const loadingEl = document.getElementById("loading");
+      const emptyStateEl = document.getElementById("emptyState");
+      const graphEl = document.getElementById("graph");
+      const refreshButton = document.getElementById("refreshButton");
+      const clearButton = document.getElementById("clearButton");
+
+      // Current tree data
+      let conversationTree = null;
+
+      // Initialize the sidebar
+      document.addEventListener("DOMContentLoaded", function () {
+        // Set up event listeners
+        refreshButton.addEventListener("click", refreshTree);
+        clearButton.addEventListener("click", clearTree);
+
+        // Get the initial tree data
+        getConversationTree();
+
+        // Listen for messages from the background script
+        port.onMessage.addListener(handleMessage);
+      });
+
+      // Handle messages from the background script
+      function handleMessage(message) {
+        console.log("Sidebar received message:", message);
+
+        if (message.action === "getConversationTreeResponse") {
+          if (message.success && message.tree) {
+            conversationTree = message.tree;
+            renderTree();
+          } else {
+            showEmptyState(
+              "Error: " + (message.error || "Could not get conversation tree")
+            );
+          }
+        } else if (message.action === "treeUpdated") {
+          conversationTree = message.tree;
+          renderTree();
+        }
+      }
+
+      // Get the conversation tree from the content script
+      function getConversationTree() {
+        showLoading();
+
+        port.postMessage({
+          action: "getConversationTree",
+        });
+      }
+
+      // Refresh the tree data
+      function refreshTree() {
+        getConversationTree();
+      }
+
+      // Clear the conversation tree
+      function clearTree() {
+        if (
+          confirm(
+            "Are you sure you want to clear the conversation tree? This action cannot be undone."
+          )
+        ) {
+          // Clear from local storage via messaging to the content script
+          port.postMessage({
+            action: "clearConversationTree",
+          });
+
+          // Clear our local copy
+          conversationTree = { rootId: null, nodes: {} };
+          renderTree();
+        }
+      }
+
+      // Render the tree visualization
+      function renderTree() {
+        console.log("Rendering tree:", conversationTree);
+
+        // Check if we have any data
+        if (
+          !conversationTree ||
+          !conversationTree.rootId ||
+          Object.keys(conversationTree.nodes).length === 0
+        ) {
+          showEmptyState();
+          return;
+        }
+
+        // Show the graph container
+        loadingEl.style.display = "none";
+        emptyStateEl.style.display = "none";
+        graphEl.style.display = "block";
+
+        // Generate the Mermaid diagram syntax
+        const mermaidCode = generateMermaidCode();
+
+        // Create a container for the diagram
+        graphEl.innerHTML = `<div class="mermaid">${mermaidCode}</div>`;
+
+        // Render the diagram
+        mermaid.init(undefined, ".mermaid");
+
+        // Add click event listeners to the nodes
+        setTimeout(() => {
+          document.querySelectorAll(".node").forEach((node) => {
+            node.addEventListener("click", handleNodeClick);
+          });
+        }, 100);
+      }
+
+      // Generate the Mermaid code for the flowchart
+      function generateMermaidCode() {
+        // Start the flowchart
+        let code = "graph TD;\n";
+
+        // Add the nodes
+        Object.values(conversationTree.nodes).forEach((node) => {
+          const shortLabel = truncateText(node.label, 40);
+          const tooltip = node.content
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, "\\n");
+
+          // Add the node with styling based on author
+          const nodeStyle =
+            node.author === "User"
+              ? "fill:#e5f2ff,stroke:#3b82f6,color:#1e40af"
+              : "fill:#f0fdf4,stroke:#22c55e,color:#166534";
+
+          code += `  ${node.id}["${shortLabel}" tooltip="${tooltip}" style="${nodeStyle}"];\n`;
+
+          // Add the connections
+          if (node.parentId) {
+            code += `  ${node.parentId} --> ${node.id};\n`;
+          }
+        });
+
+        return code;
+      }
+
+      // Handle node click
+      function handleNodeClick(event) {
+        const nodeId = event.currentTarget.id;
+
+        // Extract the message ID from the node ID (remove the mermaid prefix)
+        const messageId = nodeId.replace("flowchart-", "");
+
+        // Send a message to highlight this message in the chat
+        port.postMessage({
+          action: "highlightMessage",
+          messageId: messageId,
+        });
+      }
+
+      // Helper function to truncate text
+      function truncateText(text, maxLength) {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength - 3) + "...";
+      }
+
+      // Show the loading state
+      function showLoading() {
+        loadingEl.style.display = "flex";
+        emptyStateEl.style.display = "none";
+        graphEl.style.display = "none";
+      }
+
+      // Show the empty state
+      function showEmptyState(message) {
+        loadingEl.style.display = "none";
+        emptyStateEl.style.display = "flex";
+        graphEl.style.display = "none";
+
+        if (message) {
+          document.querySelector(".empty-state-detail").textContent = message;
+        } else {
+          document.querySelector(".empty-state-detail").textContent =
+            "Start or join a conversation in ChatGPT to see the tree visualization.";
+        }
+      }
+    </script>
+  </body>
+</html>

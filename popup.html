@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatGPT Conversation Tree</title>
+    <link rel="stylesheet" href="popup.css" />
+    <!-- Mermaid.js for rendering the graph -->
+    <script src="libs/mermaid.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Conversation Tree</h1>
+        <div class="actions">
+          <button id="refreshButton" title="Refresh Tree">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+              />
+            </svg>
+          </button>
+          <button id="clearButton" title="Clear Tree">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div id="loading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Loading conversation tree...</p>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+            ></path>
+            <line x1="9" y1="10" x2="15" y2="10"></line>
+            <line x1="12" y1="7" x2="12" y2="13"></line>
+          </svg>
+          <p>No conversation data available</p>
+          <p class="empty-state-detail">
+            Start or join a conversation in ChatGPT to see the tree
+            visualization.
+          </p>
+        </div>
+
+        <div id="graph" class="graph-container" style="display: none"></div>
+      </div>
+
+      <footer>
+        <p>Click a node to highlight the message in the chat.</p>
+      </footer>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
