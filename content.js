@@ -12,6 +12,9 @@ class ConversationTracker {
     this.observer = null;
     this.messageIdCounter = 0;
     this.editObservers = new Map(); // Track edit buttons for each message
+    this.mutationQueue = [];
+    this.processingMutations = false;
+    this.maxMessages = 1000; // Maximum number of messages to store
 
     // Load existing tree from storage
     this.loadTreeFromStorage();
@@ -28,6 +31,9 @@ class ConversationTracker {
         sendResponse({ tree: this.conversationTree });
       } else if (request.action === "highlightMessage") {
         this.highlightMessage(request.messageId);
+        sendResponse({ success: true });
+      } else if (request.action === "clearConversationTree") {
+        this.clearConversationTree();
         sendResponse({ success: true });
       }
     });
@@ -48,7 +54,13 @@ class ConversationTracker {
 
     // Create a MutationObserver to watch for changes
     this.observer = new MutationObserver((mutations) => {
-      this.processMutations(mutations);
+      // Add mutations to the queue
+      this.mutationQueue.push(...mutations);
+
+      // Process the queue with throttling if not already processing
+      if (!this.processingMutations) {
+        this.processMutationQueue();
+      }
     });
 
     // Start observing
@@ -62,6 +74,33 @@ class ConversationTracker {
 
     // Initial scan of the page for existing messages
     this.scanExistingMessages();
+  }
+
+  processMutationQueue() {
+    // Set flag to prevent multiple processing
+    this.processingMutations = true;
+
+    // Process batches of mutations with throttling
+    setTimeout(() => {
+      // Get current batch of mutations
+      const currentBatch = this.mutationQueue.splice(
+        0,
+        this.mutationQueue.length
+      );
+
+      if (currentBatch.length > 0) {
+        this.processMutations(currentBatch);
+      }
+
+      // Check if there are more mutations to process
+      if (this.mutationQueue.length > 0) {
+        // Continue processing with throttling
+        this.processMutationQueue();
+      } else {
+        // Reset flag when queue is empty
+        this.processingMutations = false;
+      }
+    }, 300); // 300ms throttle as required
   }
 
   scanExistingMessages() {
@@ -395,6 +434,111 @@ class ConversationTracker {
     if (message.parentId && this.conversationTree.nodes[message.parentId]) {
       this.conversationTree.nodes[message.parentId].childIds.push(message.id);
     }
+
+    // Check if we need to prune the tree
+    this.pruneTreeIfNeeded();
+  }
+
+  pruneTreeIfNeeded() {
+    const nodeCount = Object.keys(this.conversationTree.nodes).length;
+
+    // Check if we need to prune
+    if (nodeCount > this.maxMessages) {
+      console.log(
+        `Tree exceeded ${this.maxMessages} messages (${nodeCount}), pruning oldest branches...`
+      );
+
+      // Find leaf nodes (nodes with no children)
+      const leafNodes = this.findLeafNodes();
+
+      // Sort leaf nodes by timestamp (oldest first)
+      leafNodes.sort((a, b) => {
+        const timestampA = new Date(
+          this.conversationTree.nodes[a].timestamp
+        ).getTime();
+        const timestampB = new Date(
+          this.conversationTree.nodes[b].timestamp
+        ).getTime();
+        return timestampA - timestampB;
+      });
+
+      // Calculate how many nodes to remove
+      const nodesToRemoveCount = nodeCount - this.maxMessages;
+
+      // Remove the oldest branches
+      let removedCount = 0;
+      for (
+        let i = 0;
+        i < leafNodes.length && removedCount < nodesToRemoveCount;
+        i++
+      ) {
+        removedCount += this.removeNodeAndUnusedAncestors(leafNodes[i]);
+      }
+
+      console.log(`Pruned ${removedCount} nodes from the tree`);
+    }
+  }
+
+  findLeafNodes() {
+    const leafNodes = [];
+
+    for (const nodeId in this.conversationTree.nodes) {
+      if (this.conversationTree.nodes[nodeId].childIds.length === 0) {
+        leafNodes.push(nodeId);
+      }
+    }
+
+    return leafNodes;
+  }
+
+  removeNodeAndUnusedAncestors(nodeId) {
+    // Don't remove the root node
+    if (nodeId === this.conversationTree.rootId) {
+      return 0;
+    }
+
+    let removedCount = 0;
+    const node = this.conversationTree.nodes[nodeId];
+
+    if (!node) {
+      return 0;
+    }
+
+    // Remove the node
+    delete this.conversationTree.nodes[nodeId];
+    removedCount++;
+
+    // Remove this node from its parent's children array
+    if (node.parentId && this.conversationTree.nodes[node.parentId]) {
+      const parent = this.conversationTree.nodes[node.parentId];
+      parent.childIds = parent.childIds.filter((id) => id !== nodeId);
+
+      // If the parent now has no children and it's not the current branch or the root,
+      // recursively remove it as well
+      if (
+        parent.childIds.length === 0 &&
+        parent.id !== this.conversationTree.rootId &&
+        parent.id !== this.lastMessageId
+      ) {
+        removedCount += this.removeNodeAndUnusedAncestors(parent.id);
+      }
+    }
+
+    return removedCount;
+  }
+
+  clearConversationTree() {
+    // Reset the tree
+    this.conversationTree = {
+      rootId: null,
+      nodes: {},
+    };
+    this.lastMessageId = null;
+
+    // Save the empty tree
+    this.saveTreeToStorage();
+
+    console.log("Conversation tree cleared");
   }
 
   loadTreeFromStorage() {

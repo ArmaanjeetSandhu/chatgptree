@@ -21,11 +21,15 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["sidebar.html", "libs/*"],
+      "resources": ["sidebar.html", "sidebar.js", "libs/*"],
       "matches": ["https://chatgpt.com/*"]
     }
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "minimum_chrome_version": "123",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }
